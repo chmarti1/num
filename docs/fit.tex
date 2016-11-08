@@ -1,0 +1,64 @@
+\documentclass{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\title{Documentation for NUM.FIT}
+\author{Chris Martin}
+\date{\today}
+
+\def\x{\vec{x}}
+\def\p{\vec{p}}
+\def\R{\mathbb{R}}
+
+\begin{document}
+\maketitle
+
+\section{The Problem}
+Imagine an experiment with $m$ independent variables.  Over the course of the experiment, we collect a series of measurements
+\begin{align}
+y_1, y_2, y_3, \ldots\nonumber
+\end{align}
+each made at conditions corresponding to independent variables
+\begin{align}
+\x_1, \x_2, \x_3, \ldots\nonumber
+\end{align}
+
+Given the form of a function of $\x$ that can be tuned by $n$ parameters, we want to find values of the parameters so that the function predicts the measurements as closely as possible.
+
+The most common example of this type of analysis is polynomial regression, which takes the form
+\begin{align}
+f(x,\p) = p_0 + p_1 x + p_2 x^2 + \ldots \nonumber
+\end{align}
+For these cases, there is an explicit solution for the best choice of parameters.  However, if the parameters appear nonlinearly (like below) things get very complicated.
+\begin{align}
+f(x,\p) = p_0 + p_1 a ^ {p_2 x} \nonumber
+\end{align}
+
+\subsection{Formulation}
+We will notate the set of $N$ measurements, $Y$, as
+\begin{align}
+Y:=\{y_i \in \R \quad | \quad 1 \le i \le N\}.
+\end{align}
+The corresponding set of independent variables is given by
+\begin{align}
+X := \{\x_i \in \R^m \quad | \quad 1 \le i \le N\}.
+\end{align}
+If there are $n$ parameters available to tune the function,
+\begin{align}
+\p \in \R^n
+\end{align}
+then the function must be of the form
+\begin{align}
+f(\x,\p) \in (\R^m\times\R^n) \rightarrow \R.
+\end{align}
+For compactness of notation, it will be useful to abbreviate the function's value at measurement $i$ as $f_i(\p) \equiv f(\x_i,\p)$ or simply $f_i$.
+
+To quantify the function's ability to predict the measurement, we may consider the sum of the squares of the error.
+\begin{align}
+e^2 = \sum_{i=1}^N (f_i(\p) - y_i)^2
+\end{align}
+The choice of $\p$ is optimum when $e^2$ is minimum.  Of course, the realities of experimentation are that some measurements may be more trusted than others.
+
+
+\end{document}

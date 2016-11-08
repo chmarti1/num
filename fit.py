@@ -324,6 +324,7 @@ _R is the residual vector containing the gradient of the square of error.
 """
         return self.Y.size
         
+        
     def np(self):
         """Return the number of parameters in the fit excluding a and b
     n = FIT.np()
@@ -333,6 +334,7 @@ To include a and b, use ntot()
 """
         return self.P.size
         
+        
     def ntot(self):
         """Return the total number of parameters in the fit (including a and b)
     n = FIT.ntot()
@@ -341,6 +343,7 @@ To exclude a and b, use n()
  See also: N(), np(), xdim()
 """
         return self.P.size + (self.a!=None) + (self.b!=None)
+
     
     def xdim(self):
         """Return the dimension of x or number of columns in X
@@ -352,6 +355,24 @@ To exclude a and b, use n()
             return self.X.shape[1]
         else:
             return 1
+
+
+    def covar(self):
+        """Return a coefficient covariance matrix
+    C = FIT.covar()
+
+When the b and a coefficients are in use, they are represented in the 
+last columns/rows.  For example, in an example where one scalar 
+parameter, p, is in use with a and b, the covariance matrix will appear
+
+        / Cpp Cpb Cpa \
+    C = | Cbp Cbb Cba |
+        \ Cap Cab Caa /
+        
+where Cxy = covar(x,y).  The a and b rows and columns will be omitted 
+when a or b is not in use.
+"""
+        return self._COV.copy()
 
 
     def plot(self,fig=None):
