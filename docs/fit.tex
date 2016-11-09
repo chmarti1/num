@@ -61,20 +61,21 @@ For compactness of notation, it will be useful to abbreviate the function's valu
 
 To quantify the function's ability to predict the measurement, we may consider the sum of the squares of the error.
 \begin{align}
-e^2 = \sum_{i=1}^N (f_i(\p) - y_i)^2 w_i
+e^2 = \sum_{i=1}^N (f_i(\p) - y_i)^2 w_i\label{eqn:e2}
 \end{align}
 The choice of $\p$ is optimum when $e^2$ is minimum.  The weighting factor, $w_i > 0$, appeas so it is possible for some measurements to be valued more highly than others.  When the function deviates from a point with a high weighting factor, there will be a stronger than normal penalty, but if the function deviates from a lowly weighted measurement, the error will be less strongly affected.  The weighting factor is nominally unity for all values, and can be adjusted arbitrarily.
 
 \section{Solution}
-At the optimum values of $\p$, derivatives of $e^2$ with respect to the elements of $\p$ will vanish.  So, we establish a \emph{residual} or numerical error vector,
+At the optimum values of $\p$, derivatives of $e^2$ with respect to the elements of $\p$ will vanish.  So, we establish a \emph{residual} or numerical error vector by differentiating equation \ref{eqn:e2},
 \begin{align}
 \r := \sum_{i=1}^N (f_i(\p) - y_i) \nabla f_i(\p) w_i.\label{eqn:residual}
 \end{align}
 Here, $\nabla \equiv (\partial/\partial p_1, \partial/\partial p_2, \ldots )$.  By asserting that the residuals are zero, we have sufficient constraints to solve for $\p$.
 
+\subsection{Iteration}
 Unlike linear regression, it is not possible to explicitly invert equation \ref{eqn:residual} to solve for $\p$.  Instead, it is necessary to solve for the parameters numerically.  If we conduct a series of approximations, $\p_1, \p_2, \ldots$, then we may approximate the residual of a future approximation from the Taylor series of the present,
 \begin{align}
-\r(\p_{k+1}) \approx \r(\p_k) + (\nabla \r(\p_k))\cdot (\p_{k+1} - \p_k).\label{ref:rstep}
+\r(\p_{k+1}) \approx \r(\p_k) + (\nabla \r(\p_k))\cdot (\p_{k+1} - \p_k).\label{eqn:rstep}
 \end{align}
 We will establish a candidate for the next guess for $\p_{k+1}$ by asserting that $\r(\p_{k+1})$ be zero.  This is Newton-Raphson iteration in $n$ dimensions.
 
@@ -85,7 +86,7 @@ Equation \ref{eqn:rstep} is not in a form that is readily implemented numericall
 It is convenient to adopt some notation for the individual terms in equation \ref{eqn:dr}.  One can recognize the Jacobian vector, $\J_i$, and Hessian matrix, $\H_i$, of the function at measurement $i$,
 \def\arraystretch{2}
 \begin{align}
-\J_i &:= \nabla f_i = \left(\frac{\partial f_i}{\partial p_1}, \frac{\partial f_i}{\partial p_2}, \ldots \right)\\
+\J_i &:= \nabla f_i = \left(\frac{\partial f_i}{\partial p_1}, \frac{\partial f_i}{\partial p_2}, \ldots \right)^T\\
 \H_i &:= \nabla \nabla f_i =\left[ 
 \begin{array}{ccc}
 \frac{\partial^2 f_i}{\partial p_1{^2}} & \frac{\partial^2 f_i}{\partial p_1 \partial p_2} & \cdots \\
@@ -98,19 +99,77 @@ The FIT algorithm estimates the Jacobian and Hessian numerically by applying sma
 
 In the process of evaluating $\nabla \r$ in equation \ref{eqn:dr}, one must calculate two intermediate matrices,
 \begin{align}
-\PSI_i &:= J_i J_i\,^T\\
-\LAM_i &:= \left[\PSI_i + (f_i - y_i) \H_i\right]w_i.\\
+\PSI_i &:= J_i J_i\,^T\label{eqn:psi}\\
+\LAM_i &:= \left[\PSI_i + (f_i - y_i) \H_i\right]w_i.\label{eqn:lam}
 \end{align}
 Purely for compactness of notation, we will also adopt $\LAM$ with no subscript as the result of the sum of the individual $\LAM_i$ matrices,
 \begin{align}
-\nabla r = \LAM = \sum_{i=1}^N \LAM_i.
+\nabla \r &= \LAM = \sum_{i=1}^N \LAM_i.\label{eqn:dr}\\
+\r &= \sum_{i=1}^N (f_i - y_i) \J_i w_i.\label{eqn:r}
 \end{align}
 
 Now, we may solve for $\p_{k+1}$.  By replacing $\nabla \r$ with $\LAM$ in equation \ref{eqn:rstep}, the residual approximation will be zero when
 \begin{align}
-\p_{k+1} = \p_k - \LAM^{-1} \r.\label{eqn:pstep}
+\p_{k+1} = \p_k - \LAM^{-1} \r\label{eqn:pstep}
 \end{align}
 In equation \ref{eqn:pstep}, $\LAM$ and $\r$ are evaluated using $\p=\p_k$.
 
+\subsection{Testing Convergence}
+Equation \ref{eqn:pstep} can be repeated until the solution is approximation appears sufficiently near to the solution.  The residuals are a direct measure of numerical error, but they have an arbitrary scale.  They are related to an error in the parameters by equation \ref{eqn:pstep}.  In essence, $\p_{k+1} - \p_k$ is a measure of how far $\p_{k}$ is from the solution.  With that in mind, let the error in $\p$ be approximated by
+\begin{align}
+\vec{e} \approx \p_k - \p_{k+1}  = \LAM^{-1} \r.\label{eqn:e}
+\end{align}
+
+We will tolerate a small fractional error, $0<\epsilon<1$, in each element of $\p$.  If one or more of the parameters is close to zero, however, this will create a problem, so we also define a very small number, $0<e_s\ll 1$.  The test for convergence is obtained by testing each of the elements of the error,
+\begin{align}
+\prod_{j=1}^n \left(|e_j| < \epsilon |p_j|\right) \lor \left(|e_j| < e_s\right)
+\end{align}
+
+The choice of $\epsilon$ and $e_s$ should be based on the desired numerical precision and the machine precision.  For six decimal places of precision, $\epsilon$ should be $1\times10^{-6}$.  The choice of $e_s$ is much more arbitrary
+
+\subsection{Preventing Orbits and Jumps}
+Newton iteration is notorious for behaving badly in high dimensional systems if the error function is highly nonlinear.  It can fall victim to endless orbits of a solution or can, without warning, jump wildly if the solution matrix nears a singularity.  
+
+These events can be detected by testing the magnitude of the residual vector each iteration.  If the proximity of $\p$ to a solution is decreasing, then so should $\|\r\|$.  If the choice of $\p_{k+1}$ fails to reduce $\|\r\|$, then the residuals are so nonlinear that the extrapolation in equation \ref{eqn:pstep} has failed.
+
+While the extrapolation may not be an appropriate guess, there must be a valid guess somewhere along the path represented by $-\vec{e}$.  Consider the Taylor series of $\r$ when we perturb $\p$ by a vector $-a\vec{e}$ where $0\le a\le 1$,
+\begin{align}
+\r(\p-a\vec{e}) = \r(\p) - a \LAM \cdot \vec{e} + \ldots
+\end{align}
+By substituting equation \ref{eqn:e}, one obtains
+\begin{align}
+\r(\p-a\vec{e}) = \r(\p) (1-a) + \ldots
+\end{align}
+
+The terms that are omitted represent higher polynomial orders of $a$.  If $a$ shrinks to be very small, those terms will vanish and we are guaranteed that the size of $\r$ will shrink on the next iteration.  What remains is the question, ``how small is small?''  If a guess for $\p$ fails the declining $\|\r\|$ test, FIT repeatedly reduces $a$ by half until the test passes.  Then, iteration resumes normally.
+
+\section{Estimating Coefficient Confidence}
+Measurements are only ever taken with limited accuracy, so if the experimental data were repeated, new coefficients would be obtained.  In this way, they may be regarded as random variables.
+
+If each measurement, $y_i$, were to be changed by some random quantity, $\delta y_i$, there should be a corresponding deviation in the parameters, $\delta \p$.  When $\p$ is a solution, equation \ref{eqn:residual} is equal to zero, and
+\begin{align}
+0 = \sum_{i=1}^N \left( f_i(\p + \delta \p) - y_i - \delta y_i \right) \nabla f_i(\p + \delta p) w_i.
+\end{align}
+By asserting that the deviations be small, we may expand to obtain
+\begin{align}
+0 &\approx \sum_{i=1}^N \left( f_i + \J_i \cdot \delta\p - y_i - \delta y_i \right) \left( \J_i + \H_i\cdot\delta\p \right)w_i \nonumber\\
+&\approx \LAM \cdot \delta \p - \sum_{i=1}^N \J_i w_i\, \delta y_i\nonumber
+\end{align}
+
+The covariance matrix for $\p$ will be
+\begin{align}
+\left\langle \delta\p\ \delta\p\,{^T} \right\rangle &= \left\langle \left(\LAM^{-1} \sum_{i=1}^N \J_i w_i\, \delta y_i \right) \left(\LAM^{-1} \sum_{j=1}^N \J_j w_j\, \delta y_j\right)^T \right\rangle\nonumber\\
+&= \LAM^{-1} \left( \sum_{i=1}^N \sum_{j=1}^N \J_i \J_j\,{^T} w_i{^2} \left\langle \delta y_i \delta y_j \right\rangle \right) \LAM^{-1} \nonumber
+\end{align}
+
+If the error between measurements is uncorrelated $\langle \delta y_i \delta y_j \rangle$ will be zero unless $i=j$.  Therefore,
+\begin{align}
+\mathrm{cov}(\p,\p) = \LAM^{-1} \left( \sum_{i=1}^N \PSI_i w_i{^2} \left\langle \delta y_i{^2} \right\rangle \right) \LAM^{-1}\label{eqn:covar}
+\end{align}
+
+It is immediately apparent why measurements with low accuracy should be given a small weighting factor.  A large variance in $y_i$ will contribute to variance in the parameters unless $w_i$ is small.  When we assume that all points have equal variance, $\sigma_y{^2}$,
+\begin{align}
+\mathrm{cov}(\p,\p) =  \LAM^{-1} \left( \sum_{i=1}^N \PSI_i w_i{^2} \right) \LAM^{-1} \sigma_y{^2}.\label{eqn:covar2}
+\end{align}
 
 \end{document}

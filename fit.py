@@ -120,7 +120,7 @@ the latter including an optional linear scaling and offset.
                 if np.all(np.abs(self._dp) < np.maximum(self.P*epsilon,small)):
                     # Update the residuals and matrix one last time
                     self._step()
-                    self._COV = self._LAM.I * self._PSI * self._LAM.I * self._e2
+                    self._COV = self._LAM.I * self._COV * self._LAM.I * self._e2
                     self._conv = True
                     return
             # If the residual magnitude is growing
@@ -211,7 +211,7 @@ _R is the residual vector containing the gradient of the square of error.
         pv_flag = self.P.ndim==1
         
         self._LAM = np.matrix(np.zeros((nt,nt)))
-        self._PSI = np.matrix(np.zeros((nt,nt)))
+        self._COV = np.matrix(np.zeros((nt,nt)))
         self._R = np.matrix(np.zeros((nt,1)))
         self._e2 = 0.
         # compute a perturbation vector
@@ -307,12 +307,11 @@ _R is the residual vector containing the gradient of the square of error.
             
             # Build up the solution matrix and residuals vector
             dy = f00 - self.Y[xi]
-            self._PSI += J*J.T*self.W[xi]
-            self._LAM += dy*H*self.W[xi]
+            PSI = J*J.T
+            self._COV += PSI * self.W[xi] * self.W[xi]
+            self._LAM += (PSI + dy*H)*self.W[xi]
             self._R += dy*J*self.W[xi]
             self._e2 += dy*dy
-        # Finally, add the jacobian contribution to lambda
-        self._LAM += self._PSI
         self._e2 /= N
 
                 
