@@ -172,4 +172,9 @@ It is immediately apparent why measurements with low accuracy should be given a 
 \mathrm{cov}(\p,\p) =  \LAM^{-1} \left( \sum_{i=1}^N \PSI_i w_i{^2} \right) \LAM^{-1} \sigma_y{^2}.\label{eqn:covar2}
 \end{align}
 
+If the accuracy of the measurements are not known, the variance in $y$ can be numerically estimated by their deviations from the function,
+\begin{align}
+\sigma_y{^2} \approx \sum_{i=1}^N \frac{\left( f_i - y_i \right)^2}{N}
+\end{align}
+
 \end{document}
