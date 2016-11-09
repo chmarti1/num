@@ -10,6 +10,11 @@
 \def\x{\vec{x}}
 \def\p{\vec{p}}
 \def\R{\mathbb{R}}
+\def\r{\vec{r}}
+\def\J{\vec{J}}
+\def\H{{\bf H}}
+\def\LAM{{\bf \Lambda}}
+\def\PSI{{\bf \Psi}}
 
 \begin{document}
 \maketitle
@@ -40,7 +45,7 @@ We will notate the set of $N$ measurements, $Y$, as
 \begin{align}
 Y:=\{y_i \in \R \quad | \quad 1 \le i \le N\}.
 \end{align}
-The corresponding set of independent variables is given by
+If each measurement was made at a condition defined by $m$ independent variables, the corresponding set of independent variables can be represented by
 \begin{align}
 X := \{\x_i \in \R^m \quad | \quad 1 \le i \le N\}.
 \end{align}
@@ -48,7 +53,7 @@ If there are $n$ parameters available to tune the function,
 \begin{align}
 \p \in \R^n
 \end{align}
-then the function must be of the form
+and the function must be of the form
 \begin{align}
 f(\x,\p) \in (\R^m\times\R^n) \rightarrow \R.
 \end{align}
@@ -56,9 +61,56 @@ For compactness of notation, it will be useful to abbreviate the function's valu
 
 To quantify the function's ability to predict the measurement, we may consider the sum of the squares of the error.
 \begin{align}
-e^2 = \sum_{i=1}^N (f_i(\p) - y_i)^2
+e^2 = \sum_{i=1}^N (f_i(\p) - y_i)^2 w_i
 \end{align}
-The choice of $\p$ is optimum when $e^2$ is minimum.  Of course, the realities of experimentation are that some measurements may be more trusted than others.
+The choice of $\p$ is optimum when $e^2$ is minimum.  The weighting factor, $w_i > 0$, appeas so it is possible for some measurements to be valued more highly than others.  When the function deviates from a point with a high weighting factor, there will be a stronger than normal penalty, but if the function deviates from a lowly weighted measurement, the error will be less strongly affected.  The weighting factor is nominally unity for all values, and can be adjusted arbitrarily.
+
+\section{Solution}
+At the optimum values of $\p$, derivatives of $e^2$ with respect to the elements of $\p$ will vanish.  So, we establish a \emph{residual} or numerical error vector,
+\begin{align}
+\r := \sum_{i=1}^N (f_i(\p) - y_i) \nabla f_i(\p) w_i.\label{eqn:residual}
+\end{align}
+Here, $\nabla \equiv (\partial/\partial p_1, \partial/\partial p_2, \ldots )$.  By asserting that the residuals are zero, we have sufficient constraints to solve for $\p$.
+
+Unlike linear regression, it is not possible to explicitly invert equation \ref{eqn:residual} to solve for $\p$.  Instead, it is necessary to solve for the parameters numerically.  If we conduct a series of approximations, $\p_1, \p_2, \ldots$, then we may approximate the residual of a future approximation from the Taylor series of the present,
+\begin{align}
+\r(\p_{k+1}) \approx \r(\p_k) + (\nabla \r(\p_k))\cdot (\p_{k+1} - \p_k).\label{ref:rstep}
+\end{align}
+We will establish a candidate for the next guess for $\p_{k+1}$ by asserting that $\r(\p_{k+1})$ be zero.  This is Newton-Raphson iteration in $n$ dimensions.
+
+Equation \ref{eqn:rstep} is not in a form that is readily implemented numerically, so the next step is to expand its term into more basic terms.  An expression for $\nabla \r$ comes from evaluating the gradient of equation \ref{eqn:residual},
+\begin{align}
+\nabla \r &= \sum_{i=1}^N \left[(\nabla f_i)(\nabla f_i)^T + (f_i(\p) - y_i) \nabla\nabla f_i(\p)\right] w_i\label{eqn:dr}
+\end{align}
+It is convenient to adopt some notation for the individual terms in equation \ref{eqn:dr}.  One can recognize the Jacobian vector, $\J_i$, and Hessian matrix, $\H_i$, of the function at measurement $i$,
+\def\arraystretch{2}
+\begin{align}
+\J_i &:= \nabla f_i = \left(\frac{\partial f_i}{\partial p_1}, \frac{\partial f_i}{\partial p_2}, \ldots \right)\\
+\H_i &:= \nabla \nabla f_i =\left[ 
+\begin{array}{ccc}
+\frac{\partial^2 f_i}{\partial p_1{^2}} & \frac{\partial^2 f_i}{\partial p_1 \partial p_2} & \cdots \\
+\frac{\partial^2 f_i}{\partial p_2 \partial p_1} & \frac{\partial^2 f_i}{\partial p_2{^2}} & \cdots \\
+\vdots & \vdots & \ddots
+\end{array}
+\right]
+\end{align}
+The FIT algorithm estimates the Jacobian and Hessian numerically by applying small perturbations to the individual elements of $\p$ and observing the changes in $f$.  This will be discussed in more detail later, but establishing that these are calculable properties of $f_i(\p)$ permits us to treat them as building blocks for more sophisticated expressions.
+
+In the process of evaluating $\nabla \r$ in equation \ref{eqn:dr}, one must calculate two intermediate matrices,
+\begin{align}
+\PSI_i &:= J_i J_i\,^T\\
+\LAM_i &:= \left[\PSI_i + (f_i - y_i) \H_i\right]w_i.\\
+\end{align}
+Purely for compactness of notation, we will also adopt $\LAM$ with no subscript as the result of the sum of the individual $\LAM_i$ matrices,
+\begin{align}
+\nabla r = \LAM = \sum_{i=1}^N \LAM_i.
+\end{align}
+
+Now, we may solve for $\p_{k+1}$.  By replacing $\nabla \r$ with $\LAM$ in equation \ref{eqn:rstep}, the residual approximation will be zero when
+\begin{align}
+\p_{k+1} = \p_k - \LAM^{-1} \r.\label{eqn:pstep}
+\end{align}
+In equation \ref{eqn:pstep}, $\LAM$ and $\r$ are evaluated using $\p=\p_k$.
 
 
 \end{document}
