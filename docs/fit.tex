@@ -81,19 +81,19 @@ We will establish a candidate for the next guess for $\p_{k+1}$ by asserting tha
 
 Equation \ref{eqn:rstep} is not in a form that is readily implemented numerically, so the next step is to expand its term into more basic terms.  An expression for $\nabla \r$ comes from evaluating the gradient of equation \ref{eqn:residual},
 \begin{align}
-\nabla \r &= \sum_{i=1}^N \left[(\nabla f_i)(\nabla f_i)^T + (f_i(\p) - y_i) \nabla\nabla f_i(\p)\right] w_i\label{eqn:dr}
+\nabla \r &= \sum_{i=1}^N \left[(\nabla f_i)(\nabla f_i)^T + (f_i(\p) - y_i) \nabla\nabla f_i(\p)\right] w_i\label{eqn:dr:def}
 \end{align}
-It is convenient to adopt some notation for the individual terms in equation \ref{eqn:dr}.  One can recognize the Jacobian vector, $\J_i$, and Hessian matrix, $\H_i$, of the function at measurement $i$,
+It is convenient to adopt some notation for the individual terms in equation \ref{eqn:dr:def}.  One can recognize the Jacobian vector, $\J_i$, and Hessian matrix, $\H_i$, of the function at measurement $i$,
 \def\arraystretch{2}
 \begin{align}
-\J_i &:= \nabla f_i = \left(\frac{\partial f_i}{\partial p_1}, \frac{\partial f_i}{\partial p_2}, \ldots \right)^T\\
+\J_i &:= \nabla f_i = \left[\frac{\partial f_i}{\partial p_1}, \frac{\partial f_i}{\partial p_2}, \ldots \right]^T\label{eqn:jacobian}\\
 \H_i &:= \nabla \nabla f_i =\left[ 
 \begin{array}{ccc}
 \frac{\partial^2 f_i}{\partial p_1{^2}} & \frac{\partial^2 f_i}{\partial p_1 \partial p_2} & \cdots \\
 \frac{\partial^2 f_i}{\partial p_2 \partial p_1} & \frac{\partial^2 f_i}{\partial p_2{^2}} & \cdots \\
 \vdots & \vdots & \ddots
 \end{array}
-\right]
+\right]\label{eqn:hessian}
 \end{align}
 The FIT algorithm estimates the Jacobian and Hessian numerically by applying small perturbations to the individual elements of $\p$ and observing the changes in $f$.  This will be discussed in more detail later, but establishing that these are calculable properties of $f_i(\p)$ permits us to treat them as building blocks for more sophisticated expressions.
 
@@ -115,17 +115,17 @@ Now, we may solve for $\p_{k+1}$.  By replacing $\nabla \r$ with $\LAM$ in equat
 In equation \ref{eqn:pstep}, $\LAM$ and $\r$ are evaluated using $\p=\p_k$.
 
 \subsection{Testing Convergence}
-Equation \ref{eqn:pstep} can be repeated until the solution is approximation appears sufficiently near to the solution.  The residuals are a direct measure of numerical error, but they have an arbitrary scale.  They are related to an error in the parameters by equation \ref{eqn:pstep}.  In essence, $\p_{k+1} - \p_k$ is a measure of how far $\p_{k}$ is from the solution.  With that in mind, let the error in $\p$ be approximated by
+Equation \ref{eqn:pstep} can be repeated until the approximation appears sufficiently near to the solution.  The residuals are a direct measure of numerical error, but they have an arbitrary scale, so a convergence test based solely on the residuals is problematic.  They are related to an error in the parameters by equation \ref{eqn:pstep}.  Since $\p_{k+1}$ represents the best approximation of the solution, $\p_{k+1} - \p_k$ is a measure of how far $\p_{k}$ is from the solution.  With that in mind, let the error in $\p$ be approximated by
 \begin{align}
 \vec{e} \approx \p_k - \p_{k+1}  = \LAM^{-1} \r.\label{eqn:e}
 \end{align}
 
 We will tolerate a small fractional error, $0<\epsilon<1$, in each element of $\p$.  If one or more of the parameters is close to zero, however, this will create a problem, so we also define a very small number, $0<e_s\ll 1$.  The test for convergence is obtained by testing each of the elements of the error,
 \begin{align}
-\prod_{j=1}^n \left(|e_j| < \epsilon |p_j|\right) \lor \left(|e_j| < e_s\right)
+\prod_{j=1}^n \Big(|e_j| < \epsilon |p_j|\Big) \lor \Big(|e_j| < e_s\Big)
 \end{align}
 
-The choice of $\epsilon$ and $e_s$ should be based on the desired numerical precision and the machine precision.  For six decimal places of precision, $\epsilon$ should be $1\times10^{-6}$.  The choice of $e_s$ is much more arbitrary
+The choice of $\epsilon$ and $e_s$ should be based on the desired numerical precision and the machine precision.  For six decimal places of precision, $\epsilon$ should be $1\times10^{-6}$.  The choice of $e_s$ is much more arbitrary.  It should be a number sufficiently small as to be ``numerically zero.''  FIT uses $e_s = 1\times10^{-10}$.
 
 \subsection{Preventing Orbits and Jumps}
 Newton iteration is notorious for behaving badly in high dimensional systems if the error function is highly nonlinear.  It can fall victim to endless orbits of a solution or can, without warning, jump wildly if the solution matrix nears a singularity.  
@@ -142,6 +142,11 @@ By substituting equation \ref{eqn:e}, one obtains
 \end{align}
 
 The terms that are omitted represent higher polynomial orders of $a$.  If $a$ shrinks to be very small, those terms will vanish and we are guaranteed that the size of $\r$ will shrink on the next iteration.  What remains is the question, ``how small is small?''  If a guess for $\p$ fails the declining $\|\r\|$ test, FIT repeatedly reduces $a$ by half until the test passes.  Then, iteration resumes normally.
+
+\subsection{Estimating the Jacobian and Hessian}
+The above algorithm depends on being able to evaluate the Jacobian vector and the Hessian matrix at each point, $x_i$.  Except for the special cases where they can be explicitly calculated in closed form, they need to be estimated numerically.
+
+
 
 \section{Estimating Coefficient Confidence}
 Measurements are only ever taken with limited accuracy, so if the experimental data were repeated, new coefficients would be obtained.  In this way, they may be regarded as random variables.
@@ -172,9 +177,42 @@ It is immediately apparent why measurements with low accuracy should be given a 
 \mathrm{cov}(\p,\p) =  \LAM^{-1} \left( \sum_{i=1}^N \PSI_i w_i{^2} \right) \LAM^{-1} \sigma_y{^2}.\label{eqn:covar2}
 \end{align}
 
-If the accuracy of the measurements are not known, the variance in $y$ can be numerically estimated by their deviations from the function,
+If the accuracies of the measurements are not known, the variance in $y$ can be numerically estimated by their deviations from the function,
 \begin{align}
 \sigma_y{^2} \approx \sum_{i=1}^N \frac{\left( f_i - y_i \right)^2}{N}
 \end{align}
+
+\section{Special Cases}
+In many cases, functions to be fit will exhibit some nonlinearity, but they will be scaled and offset with coefficients just like a linear fit.  Consider some simple examples,
+\begin{align}
+p_0 + p_1 \exp\left(p_2 x\right) & & p_0 + p_1 x ^{p_2}\nonumber\\
+p_0 + p_1 \sin\left(p_2 x\right) & & p_0 + p_1 \sqrt{p_2 x + p_3}\nonumber
+\end{align}
+While the algorithm described so far is perfectly capable of handling these cases, we take on a great deal of unnecessary computational effort by estimating derivatives with respect to $p_0$ and $p_1$, when explicit derivatives are easily obtained without loss of generality.
+
+Let us recast the problem in a general light, where we scale and offset the original function, forming a new function
+\begin{align}
+f^\prime(\x,\p) = a\,f(\x,\p) + b.
+\end{align}
+All that needs to be done to fold $a$ and $b$ into the existing parameters is to expand the definitions for $\J$ and $\H$.  Let there be a new appended parameter vector,
+\begin{align}
+\p{^\prime} := [\,\p, b, a\,]^T
+\end{align}
+
+The new Jacobian is quite simply an extension of the original one in equation \ref{eqn:jacobian},
+\begin{align}
+\J_i{^\prime} &= \left[ \nabla f_i^\prime,\, \frac{\partial f_i^\prime}{\partial b},\, \frac{\partial f_i^\prime}{\partial a} \right]^T\nonumber\\
+ &= \left[ a\J_i,\, 1,\, f_i \right]^T.
+\end{align}
+The new Hessian follows from the Jacobian,
+\begin{align}
+\H_i^\prime &= \left[ \begin{array}{ccc}
+a\H_i & 0 & \J_i\\
+0 & 0 & 0\\
+\J_i{^T} & 0 & 0
+\end{array}\right]
+\end{align}
+
+This provides iterations on two additional parameters without additional function calls.  If $f$ has only one parameter, three function calls are required to evaluate the Jacobian and Hessian.  If $f$ were to have three parameters, the Jacobian and Hessian would require ten function calls per data point.
 
 \end{document}
