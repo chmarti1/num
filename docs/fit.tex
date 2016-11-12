@@ -146,7 +146,7 @@ The terms that are omitted represent higher polynomial orders of $a$.  If $a$ sh
 \subsection{Estimating the Jacobian and Hessian}
 The above algorithm depends on being able to evaluate the Jacobian vector and the Hessian matrix at each point, $x_i$.  Except for the special cases where they can be explicitly calculated in closed form, they need to be estimated numerically.
 
-
+In a system with $n$ parameters, there are $(n+1)(n+2)/2$ independent parameters to evaluate; $(n+1)n/2$ unique elements of the Hessian, $n$ elements of the Jacobian, and the function value itself.  This implies an expensive escalation in computational cost with the dimension of $\p$, since each independent component requires an additional function evaluation at each data point.  For example, a data set of 100 points ($N=100$), with three fit parameters, ($n=3$), the algorithm will require 1000 function evaluations per iteration.
 
 \section{Estimating Coefficient Confidence}
 Measurements are only ever taken with limited accuracy, so if the experimental data were repeated, new coefficients would be obtained.  In this way, they may be regarded as random variables.
