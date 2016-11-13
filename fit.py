@@ -102,7 +102,9 @@ class fit:
              p=(my,param,eters))
     
 F is a "fit object" which holds data, intermediate calculations, and 
-results for a nonlinear curve fit.  The function "myfun" is a of the 
+results for a nonlinear curve fit.  The fit process selcts values of 
+a parameter vector, p, to match the function as well as possible to the
+data contained in x and y.  The funciton, "myfun" is of the 
 form
 
     y = f(x,p)
@@ -167,8 +169,8 @@ Hessian matrices.  The call signature should appear
     (fi, Ji, Hi) = fjh(f, xi, p)
 
 f is the function
-xi is the x data array or scalar
-p is the parameter array
+xi is an x data point (1d array or scalar)
+p is the parameter scalar or array
 fi, Ji, and Hi are the scalar, Jacobian matrix, and Hessian matrix of
 f with respect to the elements of p.  If p is an n-element vector, then
 Ji should be an (n,1) numpy matrix and Hi should be an (n,n) numpy 
@@ -201,6 +203,7 @@ F._PSI  is the jacobian self-product matrix
         self._conv = False  # convergence flag
         self._xarray = False # array compatibility flag
         self._e2 = None     # y error variance
+        self._r2 = None     # r-square value
         self._LAM = None    # Solution matrix
         self._PSI = None    # Jacobian self-product
         self._R = None      # Residual vector
@@ -212,6 +215,8 @@ F._PSI  is the jacobian self-product matrix
         # Test for fjh override
         if usefjh != None:
             self._fjh = usefjh
+        else:
+            self._fjh = fjh
 
         # Test the a and b parameters
         if a!=None:
@@ -298,6 +303,7 @@ F._PSI  is the jacobian self-product matrix
                     # Update the residuals and matrix one last time
                     self._step()
                     self._COV = self._LAM.I * self._COV * self._LAM.I * self._e2
+                    self._r2 = 1. - self._e2 / np.var(self.Y)
                     self._conv = True
                     return
             # If the residual magnitude is growing
@@ -423,7 +429,7 @@ _R is the residual vector containing the gradient of the square of error.
                 fi += self.b
             
             # Build up the solution matrix and residuals vector
-            dy = f00 - self.Y[xi]
+            dy = fi - self.Y[xi]
             PSI = J*J.T
             self._COV += PSI * self.W[xi] * self.W[xi]
             self._LAM += (PSI + dy*H)*self.W[xi]
@@ -495,10 +501,44 @@ when a or b is not in use.
 
 
 
+    def eplot(self,fig=None):
+        """Produce an element-by-element error plot
+    F.eplot()
+        OR
+    F.eplot(fig=1)
+
+Plots a vertical line plot of the point-by-point error.  Dashed lines
+indicate the single-standard-deviation range.
+
+The fig keyword allows users to specify a matplotlib figure number
+"""
+        if fig==None:
+            f = plt.figure()
+            ax = f.add_subplot(111)
+        else:
+            f = plt.figure(fig)
+            f.clf()
+            ax = f.add_subplot(111)
+
+        N = self.N()
+        error = self.Y - self(self.X)
+        index = np.arange(N)
+        sde = np.sqrt(self._e2)
+        ax.plot([0,N-1],[sde,sde],'k--')
+        ax.plot([0,N-1],[-sde,-sde],'k--')
+        ax.vlines(index,0.,error,colors='k',linewidth=2.)
+        ax.set_xlabel('Measurement Index')
+        ax.set_ylabel('Error')
+        ax.grid('on')
+
 
     def plot(self,fig=None):
         """Produce a plot of the data and fit
-        
+    F.plot()
+        or
+    F.plot(fig=1)
+
+The fig keyword allows users to specify a matplotlib figure number
 """
         if fig==None:
             f = plt.figure()
@@ -521,3 +561,32 @@ when a or b is not in use.
         
         ax.plot(self.X,self.Y,'ko')
         ax.plot(x,y,'k')
+
+
+    def summary(self):
+        """Print a summary of the fit results
+"""
+        n = self.np()
+        print " Curve fit results summary"
+        print "==========================="
+        print " {:d} data points".format(self.N())
+        print " {:d} independent variables".format(self.xdim())
+        print " {:d} fit parameters".format(n)
+        print " {:d} total fit parameters".format(self.ntot())
+        print "==========================="
+        print " R = {:f}".format(np.sqrt(self._r2))
+        print " std_error = {:f}".format(np.sqrt(self._e2))
+        print "==========================="
+        std = np.sqrt(np.diag(self._COV))
+        if n>1:
+            for pi in range(self.np()):
+                print " P[{:d}] = {:} ({:})".format(pi,self.P[pi],std[pi])
+        else:
+            print " P = {:} ({:})".format(self.P,std[0])
+        pi = self.ntot()-1
+        if self.a!=None:
+            print " a = {:} ({:})".format(self.a,std[pi])
+            pi-=1
+        if self.b!=None:
+            print " b = {:} ({:})".format(self.b,std[pi])
+        
